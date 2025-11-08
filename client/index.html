@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Canvas</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎨</text></svg>" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="h-screen overflow-hidden bg-gray-100">
+    <div class="flex flex-col h-screen">
+        <!-- Toolbar Header -->
+        <header class="bg-white border-b border-gray-300 shadow-sm flex-shrink-0">
+            <div class="px-4 py-3">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-3">
+                        <!-- Help Toggle Button -->
+                        <button id="helpToggle" class="help-toggle-btn" title="Show Tips & Help">💡</button>
+                        <h1 class="text-2xl font-bold text-gray-800">Collaborative Canvas</h1>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div id="connectionStatus" class="connection-badge flex items-center gap-2 px-3 py-1.5 rounded-full border border-yellow-200 bg-yellow-50 transition-all duration-300 shadow-sm">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" id="statusDot"></span>
+                            <span id="statusText" class="text-xs font-medium text-yellow-700">Connecting...</span>
+                        </div>
+                        <!-- Performance metrics -->
+                        <div id="metrics" class="flex items-center gap-3 text-sm text-gray-600">
+                            <div id="fpsDisplay" class="px-2 py-1 bg-gray-100 rounded">-- FPS</div>
+                            <div id="latencyDisplay" class="px-2 py-1 bg-gray-100 rounded">-- ms</div>
+                        </div>
+                        <!-- Theme Toggle -->
+                        <button id="themeToggle" class="theme-toggle" title="Toggle Light/Dark Mode">☀️</button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <!-- Tools -->
+                    <div class="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                        <button id="brushBtn" class="toolbar-btn toolbar-btn-active flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                            </svg>
+                            <span>Brush</span>
+                        </button>
+                        <button id="eraserBtn" class="toolbar-btn flex items-center gap-2 px-4 py-2 bg-white text-gray-700 rounded-lg hover:bg-gray-200 active:bg-gray-300 transition-all duration-200 font-medium shadow-sm hover:shadow-md border border-gray-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <rect x="3" y="3" width="18" height="18" rx="2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 9l6 6M15 9l-6 6"/>
+                            </svg>
+                            <span>Eraser</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Color Picker -->
+                    <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                        <label class="text-sm font-medium text-gray-700">Color</label>
+                        <input type="color" id="colorPicker" value="#000000" class="w-12 h-10 border-2 border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors shadow-sm">
+                    </div>
+                    
+                    <!-- Brush Size -->
+                    <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-lg px-3">
+                        <label class="text-sm font-medium text-gray-700">Size</label>
+                        <input type="range" id="brushSize" min="1" max="50" value="5" class="w-32">
+                        <span id="brushSizeDisplay" class="text-sm font-semibold text-gray-700 w-12 text-center">5px</span>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="flex gap-2">
+                        <button id="undoBtn" class="toolbar-action-btn flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path>
+                            </svg>
+                            <span class="hidden sm:inline">Undo</span>
+                            <span class="text-xs opacity-75 hidden md:inline">(Ctrl+Z)</span>
+                        </button>
+                        <button id="redoBtn" class="toolbar-action-btn flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 active:bg-gray-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 10h-10a8 8 0 00-8 8v2M21 10l-6 6m6-6l-6-6"></path>
+                            </svg>
+                            <span class="hidden sm:inline">Redo</span>
+                            <span class="text-xs opacity-75 hidden md:inline">(Ctrl+Y)</span>
+                        </button>
+                        <button id="clearBtn" class="toolbar-action-btn flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-all duration-200 font-medium shadow-sm hover:shadow-md">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                            <span>Clear</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Help Sidebar -->
+        <aside id="helpSidebar" class="help-sidebar">
+            <div class="help-sidebar-header">
+                <h2 class="help-sidebar-title">💡 Tips & Help</h2>
+                <button id="helpClose" class="help-close-btn" title="Close">×</button>
+            </div>
+            <div class="help-sidebar-content">
+                <div class="help-section">
+                    <h3 class="help-section-title">Keyboard Shortcuts</h3>
+                    <div class="help-shortcut-list">
+                        <div class="help-shortcut-item">
+                            <kbd class="help-key">Ctrl</kbd> + <kbd class="help-key">Z</kbd>
+                            <span class="help-shortcut-desc">Undo</span>
+                        </div>
+                        <div class="help-shortcut-item">
+                            <kbd class="help-key">Ctrl</kbd> + <kbd class="help-key">Y</kbd>
+                            <span class="help-shortcut-desc">Redo</span>
+                        </div>
+                        <div class="help-shortcut-item">
+                            <kbd class="help-key">Shift</kbd> + <span class="help-shortcut-desc">Drag</span>
+                            <span class="help-shortcut-desc">Pan canvas</span>
+                        </div>
+                        <div class="help-shortcut-item">
+                            <kbd class="help-key">Ctrl</kbd> + <span class="help-shortcut-desc">Wheel</span>
+                            <span class="help-shortcut-desc">Zoom in/out</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="help-section">
+                    <h3 class="help-section-title">Canvas Controls</h3>
+                    <div class="help-tip-list">
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">✏️</span>
+                            <span class="help-tip-text">Use Brush tool to draw</span>
+                        </div>
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">🧽</span>
+                            <span class="help-tip-text">Use Eraser tool to remove</span>
+                        </div>
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">🔍</span>
+                            <span class="help-tip-text">Use zoom controls or Ctrl+Wheel</span>
+                        </div>
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">👥</span>
+                            <span class="help-tip-text">See other collaborators in real-time</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="help-section">
+                    <h3 class="help-section-title">Collaboration</h3>
+                    <div class="help-tip-list">
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">🎨</span>
+                            <span class="help-tip-text">Draw together with others</span>
+                        </div>
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">💾</span>
+                            <span class="help-tip-text">Save your canvas as PNG</span>
+                        </div>
+                        <div class="help-tip-item">
+                            <span class="help-tip-icon">🌙</span>
+                            <span class="help-tip-text">Toggle dark mode</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Help Sidebar Overlay -->
+        <div id="helpOverlay" class="help-overlay"></div>
+        
+        <!-- Main Content Area -->
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Canvas Area -->
+            <div class="flex-1 relative bg-white overflow-hidden">
+                <canvas id="canvas" class="absolute inset-0"></canvas>
+            </div>
+            
+            <!-- Right Panel - Users List -->
+            <aside class="w-72 bg-white border-l border-gray-200 flex-shrink-0 overflow-hidden flex flex-col shadow-sm">
+                <div class="p-4 border-b border-gray-200 bg-gray-50">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Collaborators</h2>
+                        <span id="userCount" class="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-1 rounded-full">0</span>
+                    </div>
+                </div>
+                <div id="usersList" class="flex-1 overflow-y-auto p-3 space-y-1">
+                    <!-- Users will be dynamically added here -->
+                </div>
+            </aside>
+        </div>
+        
+        <!-- Zoom Controls -->
+        <div class="zoom-controls">
+            <button id="zoomIn" class="zoom-btn">+</button>
+            <div id="zoomDisplay" class="zoom-display">100%</div>
+            <button id="zoomOut" class="zoom-btn">−</button>
+        </div>
+        
+        <!-- Canvas Utility Bar -->
+        <div class="canvas-utility-bar">
+            <div class="flex items-center gap-6">
+                <div class="utility-item">
+                    <span id="activeToolIcon">✏️</span>
+                    <span id="activeToolText">Brush</span>
+                </div>
+                <div class="utility-item">
+                    <span>📐</span>
+                    <span id="canvasSize">3000×2000</span>
+                </div>
+                <div class="utility-item">
+                    <span>⚡</span>
+                    <span id="fpsUtility">-- FPS</span>
+                </div>
+                <div class="utility-item">
+                    <span>🔍</span>
+                    <span id="zoomUtility">100%</span>
+                </div>
+            </div>
+            <button id="saveBtn" class="save-btn">💾 Save as PNG</button>
+        </div>
+    </div>
+    
+    <!-- Username Modal -->
+    <div id="nameModal" class="username-modal hidden">
+        <div class="username-modal-content">
+            <div class="username-modal-header">
+                <h3>🎨 Welcome to Collaborative Canvas</h3>
+                <p class="username-modal-subtitle">Enter your name to join the canvas</p>
+            </div>
+            <div class="username-modal-body">
+                <input 
+                    type="text" 
+                    id="nameInput" 
+                    placeholder="Your name (e.g., Alice, Bob, or 🎨 Artist)" 
+                    maxlength="20"
+                    autocomplete="off"
+                    class="username-input"
+                />
+                <div class="username-modal-actions">
+                    <button id="joinBtn" class="username-join-btn">Join Canvas</button>
+                    <button id="skipBtn" class="username-skip-btn">Skip</button>
+                </div>
+                <p class="username-hint">Your name will be visible to other collaborators</p>
+            </div>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="module" src="main.js"></script>
+</body>
+</html>
+
